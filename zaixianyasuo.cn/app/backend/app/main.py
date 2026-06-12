@@ -1,35 +1,16 @@
 import logging
-import time
 import sys
 from pathlib import Path
 
-from fastapi import FastAPI, Request, Depends
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse
-from sqlalchemy.orm import Session
-from sqlalchemy import text
-from sqlalchemy.exc import OperationalError
 
 from .core.config import get_settings
-from .database import Base, engine, get_db
-from .api.v1 import auth as auth_router
-from .api.v1 import admin as admin_router
+from .database import Base, engine
 from .api.v1 import images as images_router
-from .api.v1 import records as records_router
-from .api.v1 import feedback as feedback_router
-from .api.v1 import downloads as downloads_router
-from .utils.db_migrate import (
-    ensure_login_limit_columns,
-    ensure_compress_task_unique_index,
-    ensure_users_unique_indexes,
-    ensure_media_type_column,
-    ensure_verification_codes_table,
-    ensure_token_version_column,
-)
-from .utils.bootstrap_admin import ensure_default_admin
 
-# Structured logging: console + file
 LOG_DIR = Path(__file__).resolve().parents[2] / "logs"
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -45,142 +26,36 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 settings = get_settings()
-app = FastAPI(title="Image Compressor API", version="1.0.0")
+app = FastAPI(title="Image Compressor", version="1.0.0")
 
-
-@app.middleware("http")
-async def request_log_middleware(request: Request, call_next):
-    start = time.time()
-    response = await call_next(request)
-    duration = (time.time() - start) * 1000
-    logger.info(
-        "%s %s → %s (%.1fms)",
-        request.method,
-        request.url.path,
-        response.status_code,
-        duration,
-    )
-    return response
-
-
-@app.middleware("http")
-async def cache_control_middleware(request: Request, call_next):
-    response = await call_next(request)
-    if request.url.path.startswith("/api/"):
-        response.headers["Cache-Control"] = "no-store"
-    elif request.url.path.startswith("/static/"):
-        response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
-    return response
-
-
-@app.middleware("http")
-async def security_headers_middleware(request: Request, call_next):
-    response = await call_next(request)
-    csp = (
-        "default-src 'self'; "
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval'; "
-        "style-src 'self' 'unsafe-inline'; "
-        "img-src 'self' data: blob:; "
-        "font-src 'self'; "
-        "connect-src 'self'; "
-        "frame-ancestors 'self'; "
-        "base-uri 'self'; "
-        "form-action 'self'"
-    )
-    response.headers["Content-Security-Policy"] = csp
-    response.headers["X-Permitted-Cross-Domain-Policies"] = "none"
-    return response
-
-# CORS：从配置读取允许的域名（逗号分隔）
-cors_origins_raw = settings.CORS_ORIGINS if settings.CORS_ORIGINS != "*" else ""
-cors_origins = [o.strip() for o in cors_origins_raw.split(",") if o.strip()] if cors_origins_raw else ["*"]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=cors_origins,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allow_headers=["Authorization", "Content-Type"],
-    expose_headers=["Content-Disposition"],
+    allow_origins=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type"],
     max_age=600,
-    allow_credentials=False,
 )
 
-# Create DB tables on startup (for SQLite fallback / quick start)
 @app.on_event("startup")
 def on_startup():
     try:
         Base.metadata.create_all(bind=engine)
-    except OperationalError as e:
-        # 多 worker 同时启动时 create_all 可能竞态，已存在的表忽略
-        if "already exists" in str(e.orig) if e.orig else str(e):
-            logger.info("Table already exists (concurrent startup), continuing")
-        else:
-            logger.critical("Database initialization failed", exc_info=True)
-            raise
     except Exception:
-        logger.critical("Database initialization failed", exc_info=True)
-        raise
+        logger.warning("DB init skipped", exc_info=True)
 
-    try:
-        ensure_login_limit_columns(engine)
-        ensure_compress_task_unique_index(engine)
-        ensure_users_unique_indexes(engine)
-        ensure_media_type_column(engine)
-        ensure_verification_codes_table(engine)
-        ensure_token_version_column(engine)
-        ensure_default_admin(engine)
-    except Exception:
-        logger.warning("Migration/bootstrap check failed", exc_info=True)
-
-    # Reset stale tasks (status=0 → status=2) from interrupted runs
-    try:
-        from .models.record import CompressTask
-        from sqlalchemy import update
-        with engine.begin() as conn:
-            result = conn.execute(
-                update(CompressTask)
-                .where(CompressTask.status == 0)
-                .values(status=2, error_message="Server restarted, task lost")
-            )
-            if result.rowcount:
-                logger.info("Reset %d stale compress tasks (status 0→2)", result.rowcount)
-    except Exception:
-        logger.warning("Failed to reset stale tasks", exc_info=True)
-
-# batch_compress and video_compress now use BackgroundTasks for async processing
-@app.on_event("shutdown")
-def on_shutdown():
-    pass
-
-
-# API routers
-app.include_router(auth_router.router, prefix="/api/v1")
-app.include_router(admin_router.router, prefix="/api/v1")
-app.include_router(feedback_router.router, prefix="/api/v1")
 app.include_router(images_router.router, prefix="/api/v1")
-app.include_router(records_router.router, prefix="/api/v1")
-app.include_router(downloads_router.router, prefix="/api/v1")
 
-
-# Static frontend (路径可通过 FRONTEND_DIR 环境变量覆盖)
 FRONTEND_DIR = Path(settings.FRONTEND_DIR)
 if FRONTEND_DIR.exists():
     app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR)), name="static")
-elif not FRONTEND_DIR.exists():
-    logger.info("Frontend dir not found at %s, static files served by nginx", FRONTEND_DIR)
-
 
 @app.get("/health")
-def health_check(db: Session = Depends(get_db)):
-    try:
-        db.execute(text("SELECT 1"))
-        return {"status": "ok", "database": "connected"}
-    except Exception as e:
-        return JSONResponse(status_code=503, content={"status": "error", "database": str(e)})
-
+def health_check():
+    return {"status": "ok"}
 
 @app.get("/")
 def root_index():
     index_file = FRONTEND_DIR / "index.html"
     if index_file.exists():
         return FileResponse(index_file)
-    return JSONResponse({"message": "Image Compressor API running. Frontend not found."})
+    return JSONResponse({"message": "Image Compressor running"})
