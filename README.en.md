@@ -20,6 +20,28 @@
 
 ---
 
+## 📸 Demo
+
+### 🎯 Powerful Compression Tool
+
+Multi-format support, batch processing, privacy-first:
+
+![Features](https://zaixianyasuo.cn/images/features.png)
+
+### 💪 Real Compression Results
+
+60.7 KB → 26.7 KB at 80% quality:
+
+![Compression](https://zaixianyasuo.cn/images/compress-demo.png)
+
+### 📱 Web vs App Comparison
+
+Web version is free, app version has more features:
+
+![Comparison](https://zaixianyasuo.cn/images/comparison.png)
+
+---
+
 ## ✨ Features
 
 | Feature | Description |

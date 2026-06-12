@@ -47,6 +47,21 @@ curl -X POST http://localhost:8001/api/v1/images/batch-compress \
 curl -O http://localhost:8001/api/v1/images/download/1
 ```
 
+## 错误码
+
+| 状态码 | 说明 |
+|--------|------|
+| 200 | 成功 |
+| 400 | 请求参数错误（不支持的格式/超出限制） |
+| 404 | 资源不存在 |
+| 413 | 文件过大 |
+| 500 | 服务器错误 |
+
+错误响应示例：
+```json
+{"detail":"File too large: photo.jpg"}
+```
+
 ## 支持格式
 
 | 类型 | 输入 | 输出 |
