@@ -1,0 +1,58 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+*.egg-info/
+
+# 数据存储（运行时挂载 volume）
+storage/uploads/*
+storage/compressed/*
+storage/*.sqlite3
+storage/*.db
+!storage/uploads/.gitkeep
+!storage/compressed/.gitkeep
+
+# 日志
+logs/
+*.log
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+
+# 临时文件
+*.tmp
+*.bak
+*.bak.*
+~$*
+
+# 文档
+docs/
+*.md
+!README.md
+
+# 部署脚本（容器内用不到）
+deploy/
+deploy.sh
+scripts/
+migrate_*.py
+clear_*.py
+
+# 前端文件（容器只跑后端）
+public/
+app/frontend/
+app/frontend_bak_*.html
+
+# Docker 自身
+Dockerfile
+docker-compose.yml
+.dockerignore
+
+# 测试（生产镜像不打包）
+tests/

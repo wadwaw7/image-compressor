@@ -1,0 +1,79 @@
+# ImageCompressor 完整开发/生产环境
+# 启动: docker compose up -d
+# 查看: docker compose logs -f backend
+# 停止: docker compose down
+
+services:
+  # === MySQL 8.0 ===
+  mysql:
+    image: mysql:8.0
+    container_name: imgcompress-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-change_me}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-image_compress}
+      MYSQL_USER: ${MYSQL_USER:-imgcompress}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-change_me}
+    ports:
+      - "3307:3306"  # 映射到 3307 避免与宿主机 MySQL 冲突
+    volumes:
+      - mysql_data:/var/lib/mysql
+    command: >
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+      --default-authentication-plugin=caching_sha2_password
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD:-change_me}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # === FastAPI 后端 ===
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: imgcompress-backend
+    restart: unless-stopped
+    ports:
+      - "8001:8001"
+    environment:
+      # MySQL 连接（使用 Docker 服务名访问）
+      DATABASE_URL: mysql://${MYSQL_USER:-imgcompress}:${MYSQL_PASSWORD:-change_me}@mysql:3306/${MYSQL_DATABASE:-image_compress}
+      SECRET_KEY: ${SECRET_KEY:-change_me}
+      CORS_ORIGINS: "*"
+      UPLOAD_DIR: /app/storage/uploads
+      COMPRESS_DIR: /app/storage/compressed
+      MAX_UPLOAD_SIZE_MB: "20"
+      MAX_VIDEO_UPLOAD_SIZE_MB: "200"
+      CONCURRENCY: "4"
+      # 邮件（开发环境不发送）
+      EMAIL_PROVIDER: smtp
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: "${SMTP_PORT:-587}"
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_SSL: "${SMTP_SSL:-0}"
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:8001}
+      # 管理员
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@example.com}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-change_me}
+    volumes:
+      - uploads_data:/app/storage/uploads
+      - compressed_data:/app/storage/compressed
+    depends_on:
+      mysql:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8001/health')"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+volumes:
+  mysql_data:
+  uploads_data:
+  compressed_data:
