@@ -21,6 +21,28 @@
 
 ---
 
+## 📸 功能演示
+
+### 🎯 简单强大的压缩工具
+
+支持多种格式、批量处理、隐私保护：
+
+![功能介绍](https://zaixianyasuo.cn/images/features.png)
+
+### 💪 实际压缩效果
+
+一张 60.7 KB 的图片压缩到 26.7 KB，质量 80%：
+
+![压缩效果](https://zaixianyasuo.cn/images/compress-demo.png)
+
+### 📱 Web vs 应用对比
+
+网页版无限制，应用版功能更强：
+
+![功能对比](https://zaixianyasuo.cn/images/comparison.png)
+
+---
+
 ## ✨ 功能
 
 | 功能 | 说明 |
