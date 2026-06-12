@@ -30,7 +30,13 @@
 | **证件照换底色** | 一键换蓝底/红底/白底，预设尺寸 |
 | **AI 去水印** | 智能框选修复，本地处理 |
 
-> ⚠️ **此仓库为开源精简版**。用户系统、云端加速、PWA、桌面/移动客户端等完整功能仅在 [zaixianyasuo.cn](https://zaixianyasuo.cn) 提供。
+> 💡 **本项目开源核心压缩引擎**。用户系统、云端加速、PWA、桌面/移动客户端等进阶功能请访问 [zaixianyasuo.cn](https://zaixianyasuo.cn)。
+
+## 📋 系统要求
+
+- **Docker** 20.10+ 或 **Python** 3.10+
+- 2GB+ 可用内存
+- 推荐 Chrome / Edge / Firefox 最新版
 
 ## 🚀 快速开始
 
