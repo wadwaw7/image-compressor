@@ -1,5 +1,5 @@
 <h1 align="center">
-  <img src="https://img.shields.io/badge/status-active-success" alt="Status">
+  <img src="https://github.com/wadwaw7/image-compressor/actions/workflows/test.yml/badge.svg" alt="CI">
   <img src="https://img.shields.io/badge/license-MIT-blue" alt="License">
   <img src="https://img.shields.io/badge/PRs-welcome-brightgreen" alt="PRs">
 </h1>
