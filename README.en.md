@@ -54,6 +54,20 @@ docker compose up -d
 | Frontend | Vanilla JS + CSS Custom Properties |
 | Deploy | Docker + docker-compose |
 
+## 📁 Project Structure
+
+```
+├── zaixianyasuo.cn/
+│   ├── app/backend/          # FastAPI backend
+│   ├── public/               # Frontend pages
+│   ├── Dockerfile
+│   └── docker-compose.yml
+├── API.md                    # API docs
+├── DEVELOPMENT.md            # Dev guide
+├── LICENSE                   # MIT
+└── CONTRIBUTING.md
+```
+
 ## 🤝 Contributing
 
 Issues and PRs welcome! See [CONTRIBUTING.md](CONTRIBUTING.md)
